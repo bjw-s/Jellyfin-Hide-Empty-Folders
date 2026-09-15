@@ -9,12 +9,12 @@
     "thumbImage": "https://raw.githubusercontent.com/CapstonPeters/Jellyfin-Hide-Empty-Folders/main/logo.png",
     "versions": [
       {
-        "version": "1.0.18.0",
-        "changelog": "Real-time cleanup, Shows-only default, virtual season preservation, recursive guard, scoped queries. All prior versions removed — update to this one.",
-        "targetAbi": "10.11.3.0",
-        "sourceUrl": "https://github.com/CapstonPeters/Jellyfin-Hide-Empty-Folders/releases/download/v1.0.18/Jellyfin.Plugin.HideEmptyFolders-1.0.18.zip",
-        "checksum": "02d8de74dc9b24a2e277473c264b302c",
-        "timestamp": "2026-06-29T21:00:00Z"
+        "version": "2.0.0.0",
+        "changelog": "Jellyfin 12 compatibility: retargeted to .NET 10 and rebuilt against the Jellyfin 12.0.0 plugin assemblies.",
+        "targetAbi": "12.0.0.0",
+        "sourceUrl": "https://github.com/CapstonPeters/Jellyfin-Hide-Empty-Folders/releases/download/v2.0.0/Jellyfin.Plugin.HideEmptyFolders-2.0.0.zip",
+        "checksum": "6ab765de22b4d6755e3375614cea6ff892c68ea12f2a7a671d01435c93037536",
+        "timestamp": "2026-09-15T00:00:00Z"
       }
     ]
   }

@@ -15,7 +15,7 @@ jobs:
       - name: Setup .NET
         uses: actions/setup-dotnet@v4
         with:
-          dotnet-version: '9.0.x'
+          dotnet-version: '10.0.x'
 
       - name: Restore dependencies
         run: dotnet restore
@@ -26,12 +26,17 @@ jobs:
       - name: Create plugin ZIP
         run: |
           mkdir -p publish
-          cp bin/Release/net9.0/Jellyfin.Plugin.HideEmptyFolders.dll publish/
+          cp bin/Release/net10.0/Jellyfin.Plugin.HideEmptyFolders.dll publish/
           cp thumb.png publish/
           cp meta.json publish/
+          PLUGIN_VERSION=$(jq -r '.version' meta.json)
+          PACKAGE_NAME="Jellyfin.Plugin.HideEmptyFolders-${PLUGIN_VERSION}.zip"
           cd publish
-          zip ../Jellyfin.Plugin.HideEmptyFolders.zip Jellyfin.Plugin.HideEmptyFolders.dll thumb.png meta.json
-          echo "CHECKSUM=$(md5sum ../Jellyfin.Plugin.HideEmptyFolders.zip | cut -d' ' -f1)" >> $GITHUB_ENV
+          zip -X "../${PACKAGE_NAME}" Jellyfin.Plugin.HideEmptyFolders.dll thumb.png meta.json
+          CHECKSUM=$(md5sum "../${PACKAGE_NAME}" | cut -d' ' -f1)
+          echo "PACKAGE_NAME=${PACKAGE_NAME}" >> "$GITHUB_ENV"
+          echo "CHECKSUM=${CHECKSUM}" >> "$GITHUB_ENV"
+          echo "Created ${PACKAGE_NAME} (MD5: ${CHECKSUM})"
 
       - name: Upload build artifact
         uses: actions/upload-artifact@v4
@@ -44,5 +49,5 @@ jobs:
         continue-on-error: true
         uses: softprops/action-gh-release@v2
         with:
-          files: Jellyfin.Plugin.HideEmptyFolders.zip
+          files: ${{ env.PACKAGE_NAME }}
           generate_release_notes: true

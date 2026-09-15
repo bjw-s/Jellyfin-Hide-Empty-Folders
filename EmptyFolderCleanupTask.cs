@@ -92,7 +92,7 @@ public class EmptyFolderCleanupTask : ILibraryPostScanTask
                 Recursive = true,
                 AncestorIds = effectiveLibraryIds.Count > 0
                     ? effectiveLibraryIds.ToArray()
-                    : null,
+                    : Array.Empty<Guid>(),
             };
 
             var folders = _libraryManager.GetItemList(folderQuery);
@@ -113,7 +113,7 @@ public class EmptyFolderCleanupTask : ILibraryPostScanTask
                 Recursive = true,
                 AncestorIds = effectiveLibraryIds.Count > 0
                     ? effectiveLibraryIds.ToArray()
-                    : null,
+                    : Array.Empty<Guid>(),
             };
 
             var mediaItems = _libraryManager.GetItemList(mediaQuery);

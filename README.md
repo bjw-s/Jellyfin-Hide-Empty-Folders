@@ -82,13 +82,13 @@ Collection folders (the top-level "Movies", "TV Shows" containers) are never tou
 
 ## Building
 
-Requires .NET 9.0 SDK.
+Requires the .NET 10 SDK. This release targets Jellyfin 12.0.0 and is not compatible with Jellyfin 10.11.x.
 
 ```bash
 dotnet restore
 dotnet build --configuration Release
 ```
 
-The output DLL goes in `bin/Release/net9.0/`. Bundle it with `thumb.png` and `meta.json` for distribution.
+The output DLL goes in `bin/Release/net10.0/`. Bundle it with `thumb.png` and `meta.json` for distribution.
 
 ---

@@ -4,7 +4,9 @@
 
 # Hide Empty Folders
 
-A Jellyfin plugin that keeps your library clean. Empty folders — seasons with no episodes, box sets with no items, vacant series folders — are removed from the library view automatically. Nothing is ever deleted from disk.
+A Jellyfin plugin that keeps your library clean. Empty seasons, box sets, and
+other empty folders are removed from the library view automatically. Series
+remain visible even when they have no episodes. Nothing is ever deleted from disk.
 
 [![Listed on JellyWatch Hub](https://jellywatch.app/hub/hide-empty-folders/badge.svg)](https://jellywatch.app/hub/hide-empty-folders)
 
@@ -50,6 +52,7 @@ Open **Dashboard → Plugins → Hide Empty Folders → Settings**.
 ### Manual trigger
 
 Go to **Dashboard → Scheduled Tasks → Hide Empty Folders** and click the play button.
+Manual runs work even when **Run automatically** is disabled.
 
 ---
 
@@ -58,14 +61,18 @@ Go to **Dashboard → Scheduled Tasks → Hide Empty Folders** and click the pla
 After a library scan completes (or you trigger it manually), the plugin:
 
 1. Finds all media items across your selected libraries
-2. Walks up the folder tree marking every ancestor as "has content"
-3. Removes database entries for folders that have no media anywhere under them
+2. Protects series and folders containing media or series
+3. Removes database entries for empty seasons and other unprotected empty folders
 
 The plugin uses `DeleteFileLocation = false` — folder entries are removed from Jellyfin's database only. Your files stay exactly where they are.
 
-Collection folders (the top-level "Movies", "TV Shows" containers) are never touched.
+Collection folders (the top-level "Movies", "TV Shows" containers) and series are
+never removed, even when every season of a series is empty.
 
-**Pseudo season folders are preserved.** Jellyfin can create virtual season entries for TV libraries where episodes live in a flat folder (no real season subfolders). These pseudo seasons are left intact — only seasons whose parent series genuinely has zero media content are removed.
+**Seasons containing episodes are preserved.** Jellyfin's season matching also
+recognizes episodes stored directly in a show folder. Both physical and virtual
+seasons with no playable episodes can be removed, even when another season of
+the same show contains episodes.
 
 ---
 
@@ -73,10 +80,13 @@ Collection folders (the top-level "Movies", "TV Shows" containers) are never tou
 
 **Jellyfin is the party that adds empty folders.** The plugin only removes them from the library database — it never touches files on disk.
 
-- **If a show is added to an empty folder:** Jellyfin's real-time monitoring (or scheduled scan) picks up the new file, re-adds the previously-removed empty folder structure to the library, then the plugin removes it again within ~10 seconds. The folder may briefly reappear and vanish — this is normal.
+- **If episodes are added to an empty season:** Jellyfin's real-time monitoring
+  (or a library scan) rediscovers the season. Seasons with playable episodes are
+  preserved, and the series stays visible throughout.
 - **If you run a manual library scan:** The plugin runs immediately after the scan completes and cleans up any empty folders.
 - **If you trigger the scheduled task** (Dashboard → Scheduled Tasks → Hide Empty Folders): It runs the same cleanup on demand.
-- **Files on disk are never deleted.** The plugin uses `DeleteFileLocation = false` and skips CollectionFolder (library root) items entirely.
+- **Files on disk are never deleted.** The plugin uses `DeleteFileLocation = false`
+  and preserves series and CollectionFolder (library root) items.
 
 ---
 
@@ -90,5 +100,11 @@ dotnet build --configuration Release
 ```
 
 The output DLL goes in `bin/Release/net10.0/`. Bundle it with `thumb.png` and `meta.json` for distribution.
+
+Run the regression tests with:
+
+```bash
+dotnet test tests/HideEmptyFolders.Tests/HideEmptyFolders.Tests.csproj --configuration Release
+```
 
 ---

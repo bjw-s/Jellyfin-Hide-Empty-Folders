@@ -1,6 +1,6 @@
 {
   "name": "Hide Empty Folders",
-  "description": "Automatically hides empty folders from Jellyfin library views without deleting files.",
+  "description": "Hides empty seasons and folders while preserving series and files on disk.",
   "version": "2.0.0",
   "imagePath": "thumb.png"
 }

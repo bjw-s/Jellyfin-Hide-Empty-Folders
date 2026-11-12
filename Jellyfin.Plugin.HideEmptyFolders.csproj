@@ -5,7 +5,7 @@
     <RootNamespace>Jellyfin.Plugin.HideEmptyFolders</RootNamespace>
     <AssemblyName>Jellyfin.Plugin.HideEmptyFolders</AssemblyName>
     <Version>2.0.0</Version>
-    <Description>Hides empty folders in Jellyfin library views. Folders containing no media files are removed from the library but not deleted from disk.</Description>
+    <Description>Hides empty seasons and folders in Jellyfin library views while preserving series. Files are never deleted from disk.</Description>
     <Authors>Jo</Authors>
     <RepositoryUrl>https://github.com/CapstonPeters/Jellyfin-Hide-Empty-Folders</RepositoryUrl>
     <Nullable>enable</Nullable>
@@ -26,6 +26,7 @@
   </ItemGroup>
 
   <ItemGroup>
+    <Compile Remove="tests/**/*.cs" />
     <EmbeddedResource Include="Configuration\configPage.html" />
     <EmbeddedResource Include="thumb.png" LogicalName="thumb.png" />
     <EmbeddedResource Include="logo.png" LogicalName="logo.png" />

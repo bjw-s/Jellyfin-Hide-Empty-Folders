@@ -29,7 +29,7 @@ public class HideEmptyFoldersTask : IScheduledTask
 
     public string Name => "Hide Empty Folders";
     public string Key => "HideEmptyFolders";
-    public string Description => "Scans the library and removes folders that contain no media files. "
+    public string Description => "Removes empty seasons and folders while preserving series. "
         + "Files on disk are NOT deleted — only the library entry is removed.";
     public string Category => "Library";
 
@@ -44,6 +44,6 @@ public class HideEmptyFoldersTask : IScheduledTask
 
         var cleanupLogger = _loggerFactory.CreateLogger<EmptyFolderCleanupTask>();
         var cleanupTask = new EmptyFolderCleanupTask(_libraryManager, cleanupLogger);
-        return cleanupTask.Run(progress, cancellationToken);
+        return cleanupTask.RunManually(progress, cancellationToken);
     }
 }

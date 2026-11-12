@@ -1,4 +1,5 @@
 using Jellyfin.Data.Enums;
+using MediaBrowser.Controller.Dto;
 using MediaBrowser.Controller.Entities;
 using MediaBrowser.Controller.Entities.TV;
 using MediaBrowser.Controller.Library;
@@ -10,8 +11,8 @@ using Jellyfin.Plugin.HideEmptyFolders.Configuration;
 namespace Jellyfin.Plugin.HideEmptyFolders;
 
 /// <summary>
-/// Runs after every library scan. Finds folders with no media-containing descendants
-/// and removes them from the library database (without touching files on disk).
+/// Removes empty folders from the library database while preserving series.
+/// Files on disk are never deleted.
 /// </summary>
 public class EmptyFolderCleanupTask : ILibraryPostScanTask
 {
@@ -53,13 +54,18 @@ public class EmptyFolderCleanupTask : ILibraryPostScanTask
 
     public Task Run(IProgress<double> progress, CancellationToken cancellationToken)
     {
-        var config = Plugin.Instance?.Configuration;
-        if (config is { AutoCleanup: false })
+        if (Plugin.Instance?.Configuration is { AutoCleanup: false })
         {
             _logger.LogDebug("Auto-cleanup disabled in plugin config; skipping");
             return Task.CompletedTask;
         }
 
+        return RunManually(progress, cancellationToken);
+    }
+
+    public Task RunManually(IProgress<double> progress, CancellationToken cancellationToken)
+    {
+        var config = Plugin.Instance?.Configuration;
         progress.Report(0);
 
         try
@@ -88,7 +94,6 @@ public class EmptyFolderCleanupTask : ILibraryPostScanTask
             var folderQuery = new InternalItemsQuery
             {
                 IncludeItemTypes = FolderKinds,
-                IsVirtualItem = false,
                 Recursive = true,
                 AncestorIds = effectiveLibraryIds.Count > 0
                     ? effectiveLibraryIds.ToArray()
@@ -100,7 +105,7 @@ public class EmptyFolderCleanupTask : ILibraryPostScanTask
             progress.Report(20);
 
             // ── Step 2: Find which folders have media descendants ──
-            var foldersWithContent = new HashSet<Guid>();
+            var protectedFolders = new HashSet<Guid>();
 
             // Query leaf media items, scoped to the relevant libraries only.
             // Without AncestorIds, this would pull every movie/episode/song
@@ -120,15 +125,16 @@ public class EmptyFolderCleanupTask : ILibraryPostScanTask
             _logger.LogDebug("Found {Count} media items in library", mediaItems.Count);
             progress.Report(50);
 
-            // Mark every ancestor of each media item as "has content"
-            foreach (var item in mediaItems)
+            // Protect series ancestors too: deleting an empty parent folder
+            // could otherwise remove a series indirectly.
+            foreach (var item in mediaItems.Concat(folders.OfType<Series>()))
             {
                 cancellationToken.ThrowIfCancellationRequested();
 
                 var parentId = item.ParentId;
                 while (parentId != Guid.Empty)
                 {
-                    foldersWithContent.Add(parentId);
+                    protectedFolders.Add(parentId);
 
                     // Walk up to the parent
                     var parent = _libraryManager.GetItemById(parentId);
@@ -141,7 +147,7 @@ public class EmptyFolderCleanupTask : ILibraryPostScanTask
             }
             progress.Report(70);
 
-            _logger.LogDebug("Found {Count} folders with media content", foldersWithContent.Count);
+            _logger.LogDebug("Preserving {Count} folders containing media or series", protectedFolders.Count);
 
             // ── Step 3: Identify candidate empty folders ────────────
             // Folders with no media descendants are candidates for deletion.
@@ -151,12 +157,14 @@ public class EmptyFolderCleanupTask : ILibraryPostScanTask
             {
                 cancellationToken.ThrowIfCancellationRequested();
 
-                // Skip if it has media descendants
-                if (foldersWithContent.Contains(folder.Id))
+                // Skip folders containing media or a preserved series.
+                if (protectedFolders.Contains(folder.Id))
                     continue;
 
-                // NEVER delete library roots (CollectionFolders)
-                if (folder is CollectionFolder)
+                if (folder is CollectionFolder or Series)
+                    continue;
+
+                if (folder.IsVirtualItem && folder is not Season)
                     continue;
 
                 // Respect library selection
@@ -178,26 +186,23 @@ public class EmptyFolderCleanupTask : ILibraryPostScanTask
             progress.Report(75);
 
             // ── Step 4: Verify candidates are truly empty ──────────
-            // The media-ancestor walk (Step 2) can miss virtual/pseudo seasons
-            // that Jellyfin creates for shows without season subfolders.
-            // In those cases Episode→ParentId may point directly to Series,
-            // bypassing the Season, so the Season never gets marked.
-            //
-            // Rule: a Season is never truly empty if its parent Series has content.
-            // No DB queries needed — just check the foldersWithContent set from Step 2.
+            // Flat-folder episodes can bypass Season in the parent chain.
+            // Use Jellyfin's season matching rather than preserving every season
+            // whenever its series has any content.
             var trulyEmpty = new List<BaseItem>();
 
             foreach (var folder in candidateFolders)
             {
-                // Season with a non-empty parent Series is NOT empty
-                if (folder is Season)
+                cancellationToken.ThrowIfCancellationRequested();
+
+                if (folder is Season season)
                 {
-                    var parentSeries = _libraryManager.GetItemById(folder.ParentId);
-                    if (parentSeries != null && foldersWithContent.Contains(parentSeries.Id))
+                    if (season.GetEpisodes(null, new DtoOptions(false), false)
+                        .Any(episode => !episode.IsVirtualItem))
                     {
                         _logger.LogDebug(
-                            "Preserving virtual season {Name} — parent series {Series} has content",
-                            folder.Name, parentSeries.Name);
+                            "Preserving season {Name} — it has playable episodes",
+                            folder.Name);
                         continue;
                     }
                 }
